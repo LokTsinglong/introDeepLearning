@@ -285,7 +285,7 @@ class BatchNormalization:
             self.std =std
 
             #更新huadong均值和方差
-            self.running_mean = self.momentum*self.running_mean + (1-self.momentun)*mu
+            self.running_mean = self.momentum*self.running_mean + (1-self.momentum)*mu
             self.running_var = self.momentum*self.running_var + (1-self.momentum)*var
 
         else:
@@ -365,7 +365,7 @@ class MultiLayerNet:
     def predict(self,x,train_flag=False):
         for key,layer in self.layers.items():
             if "Dropout" in key or "BatchNorm" in key:
-                x=layer.forward(x,train_flag=False)
+                x=layer.forward(x,train_flag=train_flag)
             else:
                 x=layer.forward(x)
 
@@ -394,7 +394,7 @@ class MultiLayerNet:
             grads['W'+str(idx)]=numerical_gradient_edited(loss_W,self.params['W'+str(idx)])
             grads['b'+str(idx)]=numerical_gradient_edited(loss_W,self.params['b'+str(idx)])
             if self.use_batchnorm and idx !=self.hidden_size_list+1: #最后一层不需要
-                grads['gama'+str(idx)]=numerical_gradient_edited(loss_W,self.params['gama'+str(idx)])
+                grads['gamma'+str(idx)]=numerical_gradient_edited(loss_W,self.params['gamma'+str(idx)])
                 grads['beta'+str(idx)]=numerical_gradient_edited(loss_W,self.params['beta'+str(idx)])
         return grads
     
@@ -404,7 +404,7 @@ class MultiLayerNet:
 
         #backward
         dout=1
-        self.lastLayer.backward(dout)
+        dout=self.lastLayer.backward(dout)
 
         layers=list(self.layers.values())
         layers.reverse()
@@ -413,7 +413,7 @@ class MultiLayerNet:
         #设定
         grads={}
         for idx in range(1,self.hidden_layer_num+2):
-            grads['W'+str(idx)]=self.layers['Affine'+str(idx)].dW+self.weight_decay_lambda*self.layers['Affine'+str(idx)]
+            grads['W'+str(idx)]=self.layers['Affine'+str(idx)].dW+self.weight_decay_lambda*self.params['W'+str(idx)]
             grads['b'+str(idx)]=self.layers['Affine'+str(idx)].db
 
             if self.use_batchnorm and idx != self.hidden_layer_num+1:
@@ -422,5 +422,17 @@ class MultiLayerNet:
         return grads
 
 
+#im2col
+def im2col(input_data,filter_h,filter_w,stride=1,pad=0):
+    """
+    input_data: (N,C,H,W) four dimensional array
+    filter_h: filter height
+    filter_w: filter width
+    """
+    N,C,H,W=input_data.shape
+    out_h=(H+2*pad-filter_h)//stride+1
+    out_w=(W+2*pad-filter_w)//stride+1
+    img = np.pad(input_data,[(0,0),(0,0),(pad,pad),(pad,pad)],'constant') #在height和width方向进行pad
+    
             
 
